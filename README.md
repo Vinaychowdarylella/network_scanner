@@ -1,7 +1,7 @@
 # port_scanner
 port scanner for scanning the network by masking the ip address
 
-Things need to do beefore using the script
+Things need to do before using the script
 python3 --version 
 sudo pip3 install PySocks
 
