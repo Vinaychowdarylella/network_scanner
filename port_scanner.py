@@ -5,16 +5,19 @@ import time
 import random
 
 def initiate_stealthy_scan(scanner, target, ports):
-    """Perform a more stealthy and distributed Nmap scan."""
+    """Perform a stealthy Nmap scan with enhanced OS detection."""
     try:
-        logging.info("Starting Nmap scan. This may take a while...")
+        logging.info("Starting Nmap scan with enhanced OS detection. This may take a while...")
+
+        # Adjusted arguments for OS detection and stealth
+        scan_arguments = '-sS -T2 -O --osscan-guess --max-os-tries 1'
         
         # Randomize port order and slow down the scan
         port_list = ports.split(',')
         random.shuffle(port_list)
         for port in port_list:
-            scanner.scan(target, port, arguments='-sS -T2 -sV --version-intensity 0 --osscan-limit')
-            time.sleep(random.uniform(5, 15))  # Random sleep between scans of individual ports
+            scanner.scan(target, port, arguments=scan_arguments)
+            time.sleep(random.uniform(10, 20))  # Random sleep between scans of individual ports
 
         logging.info("Nmap scan completed.")
     except nmap.PortScannerError as e:
