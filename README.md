@@ -1,13 +1,7 @@
-# port_scanner
-port scanner for scanning the network by masking the ip address
+The ports should be entered as a comma-separated list (e.g., 22,80,443).
+The script significantly slows down the scanning process to reduce detection likelihood, so be prepared for longer scan durations.
+As always, ensure you have explicit permission to scan the target network. Unauthorized scanning can lead to serious legal and ethical consequences. This script is intended for educational purposes and authorized security assessments only.
 
-Things need to do before using the script
-python3 --version 
-sudo pip3 install PySocks
-
-gedit port_scanner.py 
-Replace 'your_proxy_address' and your_proxy_port with your actual SOCKS proxy details.
-
-To scan the network just enter the following command
+pip install python-nmap
 python3 port_scanner.py [target_host]
 
