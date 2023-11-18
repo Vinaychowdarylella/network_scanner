@@ -1,73 +1,59 @@
-import socket
+import nmap
 import sys
-import socks  # PySocks
-from datetime import datetime
+import logging
 import time
 import random
-import argparse
-import logging
 
-def scan_port(ip, port, timeout, proxy_config):
-    """Attempt to connect to a specified port on a given IP."""
+def initiate_stealthy_scan(scanner, target, ports):
+    """Perform a more stealthy and distributed Nmap scan."""
     try:
-        socks.setdefaultproxy(proxy_config['type'], proxy_config['address'], proxy_config['port'])
-        with socks.socksocket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(timeout)
-            result = sock.connect_ex((ip, port))
-            return result == 0
-    except socket.error as e:
-        logging.error(f"Error scanning port {port}: {e}")
-        return False
+        logging.info("Starting Nmap scan. This may take a while...")
+        
+        # Randomize port order and slow down the scan
+        port_list = ports.split(',')
+        random.shuffle(port_list)
+        for port in port_list:
+            scanner.scan(target, port, arguments='-sS -T2 -sV --version-intensity 0 --osscan-limit')
+            time.sleep(random.uniform(5, 15))  # Random sleep between scans of individual ports
 
-def validate_ip(ip):
-    """Validate the IP address format."""
-    try:
-        socket.inet_aton(ip)
-        return True
-    except socket.error:
-        return False
-
-def main(start_port, end_port, rate_limit, proxy_config):
-    parser = argparse.ArgumentParser(description='Network Port Scanner')
-    parser.add_argument('host', help='Host to scan')
-    args = parser.parse_args()
-
-    remoteServerIP = socket.gethostbyname(args.host)
-    if not validate_ip(remoteServerIP):
-        logging.error('Invalid IP address. Exiting')
-        sys.exit()
-
-    print("-" * 60)
-    print(f"Scanning host {remoteServerIP}, from port {start_port} to {end_port}")
-    print("-" * 60)
-
-    t1 = datetime.now()
-
-    try:
-        ports = list(range(start_port, end_port + 1))
-        random.shuffle(ports)
-        for port in ports:
-            if scan_port(remoteServerIP, port, 1, proxy_config):
-                print(f"Port {port}: Open")
-            time.sleep(rate_limit)
-    except KeyboardInterrupt:
-        logging.info("Scan stopped by user")
-        sys.exit()
-    except socket.gaierror:
-        logging.error('Hostname could not be resolved. Exiting')
-        sys.exit()
+        logging.info("Nmap scan completed.")
+    except nmap.PortScannerError as e:
+        logging.error(f"Nmap scan error: {e}")
+        sys.exit(1)
     except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
-        sys.exit()
+        logging.error(f"Unexpected error: {e}")
+        sys.exit(1)
 
-    t2 = datetime.now()
-    print('Scanning Completed in: ', t2 - t1)
+def print_scan_results(scanner):
+    """Prints the results of the Nmap scan."""
+    for host in scanner.all_hosts():
+        logging.info(f'Analyzing host: {host}')
+        print(f'Host : {host} ({scanner[host].hostname()})')
+        print(f'State : {scanner[host].state()}')
+
+        os_detail = scanner[host]['osclass'] if 'osclass' in scanner[host] else 'OS details not available'
+        print(f'OS Details: {os_detail}')
+
+        for proto in scanner[host].all_protocols():
+            print(f'----------\nProtocol : {proto}')
+
+            lport = sorted(scanner[host][proto].keys())
+            for port in lport:
+                port_info = scanner[host][proto][port]
+                service_info = f"{port_info.get('name', 'Unknown')} {port_info.get('product', '')} {port_info.get('version', '')}"
+                print(f'Port : {port}\tState : {port_info["state"]}\tService : {service_info}')
+
+def main():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    nm = nmap.PortScanner()
+
+    target = input("Enter the target IP or hostname to scan: ")
+    ports = input("Enter port range (e.g., '1-1024'): ")
+
+    logging.info(f"Preparing to scan {target} on ports {ports}.")
+    initiate_stealthy_scan(nm, target, ports)
+    print_scan_results(nm)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    proxy_config = {
-        'type': socks.PROXY_TYPE_SOCKS5,
-        'address': 'your_proxy_address',
-        'port': your_proxy_port
-    }
-    main(start_port=1, end_port=1024, rate_limit=1.0, proxy_config=proxy_config)  # Rate limit in seconds
+    main()
